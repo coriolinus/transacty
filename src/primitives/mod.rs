@@ -59,3 +59,22 @@ pub struct ClientId(u16);
     Deserialize,
 )]
 pub struct TransactionId(u32);
+
+/// A Transaction is the fundamental unit of data flowing through this system.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Transaction {
+    pub tx_type: TxType,
+    pub client: ClientId,
+    pub tx: TransactionId,
+    pub amount: Amount,
+}
+
+/// ClientState stores the fundamental data about a particular client.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ClientState {
+    pub id: ClientId,
+    pub available: Amount,
+    pub held: Amount,
+    // total is always computed dynamically, so the struct can't get out of sync with itself
+    pub locked: bool,
+}

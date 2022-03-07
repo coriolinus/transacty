@@ -94,7 +94,7 @@ impl fmt::Display for Amount {
         if post == 0 {
             write!(f, "{pre}")
         } else {
-            write!(f, "{pre}.{post}")
+            write!(f, "{pre}.{post:04}")
         }
     }
 }
