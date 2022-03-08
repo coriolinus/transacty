@@ -69,6 +69,7 @@ pub struct TransactionId(u32);
 /// It is an atomic unit of state change.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Event {
+    #[serde(rename = "type")]
     pub event_type: EventType,
     pub client: ClientId,
     pub tx: TransactionId,
@@ -76,10 +77,37 @@ pub struct Event {
 }
 
 /// ClientState stores the fundamental data about a particular client.
-#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct ClientState {
     pub available: Amount,
     pub held: Amount,
     // total is always computed dynamically, so the struct can't get out of sync with itself
+    pub locked: bool,
+}
+
+impl ClientState {
+    pub fn to_serialize(&self, client: ClientId) -> SerializeClientState {
+        let ClientState {
+            available,
+            held,
+            locked,
+        } = self.clone();
+        SerializeClientState {
+            client,
+            total: available + held,
+            available,
+            held,
+            locked,
+        }
+    }
+}
+
+/// SerializeClientState stores client data in a serialization-friendly way.
+#[derive(Serialize)]
+pub struct SerializeClientState {
+    pub client: ClientId,
+    pub available: Amount,
+    pub held: Amount,
+    pub total: Amount,
     pub locked: bool,
 }
