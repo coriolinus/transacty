@@ -73,7 +73,17 @@ pub struct Event {
     pub event_type: EventType,
     pub client: ClientId,
     pub tx: TransactionId,
+    #[serde(deserialize_with = "default_if_empty")]
     pub amount: Amount,
+}
+
+/// See https://github.com/BurntSushi/rust-csv/issues/109#issuecomment-372724808
+fn default_if_empty<'de, D, T>(de: D) -> Result<T, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de> + Default,
+{
+    Option::<T>::deserialize(de).map(|x| x.unwrap_or_else(|| T::default()))
 }
 
 /// ClientState stores the fundamental data about a particular client.

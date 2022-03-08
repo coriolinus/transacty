@@ -22,6 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let reader = csv::ReaderBuilder::new()
         .trim(csv::Trim::All)
+        .comment(Some(b'#'))
         .from_path(&cli.input)?;
 
     let mut errors = None;

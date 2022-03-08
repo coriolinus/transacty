@@ -1,0 +1,6 @@
+# This example is demonstrates the error shown when a client is unknown
+#
+# Expected output:
+#   client 1 does not exist
+type, client, tx, amount
+withdrawal, 1, 4, 1.5

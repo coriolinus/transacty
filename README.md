@@ -47,6 +47,17 @@ to ensure maximum reusability of components.
 
 ... have been omitted. YAGNI for a toy project.
 
+### Testing
+
+Integration tests are presented as CSV files in the `inputs/` directory. Each input contains an example of the expected
+output when run with the `--debug` flag. There is at least one simple integration test demonstrating each error type.
+
+I did not write any integration testing code which would run each of these as a distinct test, because that was more work
+than I wanted to put in at this point. That would be an obvious next step.
+
+Unit tests appear occasionally, for complicated bits. These generally use the `proptest` crate to expand the space of
+inputs tested.
+
 ### Error Handling
 
 Errors are generally handled gracefully, with some work put into ensuring stability. When run with the `--debug` flag,

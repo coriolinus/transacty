@@ -1,0 +1,10 @@
+# This example demonstrates that accounts cannot be withdrawn from while locked.
+#
+# Expected output:
+#   client,available,held,total,locked
+#   1,0.9,0.0,0.9,false
+type, client, tx, amount
+deposit, 1, 1, 1.0
+dispute, 2, 1,
+resolve, 3, 1,
+withdrawal, 1, 2, 0.1
