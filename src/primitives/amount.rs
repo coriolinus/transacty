@@ -37,12 +37,30 @@ use std::{fmt, str::FromStr};
 )]
 pub struct Amount(u64);
 
+impl Amount {
+    pub const ZERO: Amount = Amount(0);
+
+    pub const fn is_zero(&self) -> bool {
+        self.0 == 0
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum ParseAmountError {
     #[error("invalid format")]
     InvalidFormat,
     #[error("out of range: the supplied value cannot fit into the underlying type")]
     OutOfRange,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum AmountFromF64Error {
+    #[error("amounts must be finite and a number")]
+    NonNormal,
+    #[error("amounts must not be negative")]
+    Negative,
+    #[error(transparent)]
+    Fallback(ParseAmountError),
 }
 
 static AMOUNT_RE: Lazy<Regex> = Lazy::new(|| {
@@ -99,6 +117,31 @@ impl fmt::Display for Amount {
     }
 }
 
+impl TryFrom<f64> for Amount {
+    type Error = AmountFromF64Error;
+
+    fn try_from(value: f64) -> Result<Self, Self::Error> {
+        if !value.is_normal() && value != 0.0 {
+            return Err(AmountFromF64Error::NonNormal);
+        }
+        if value < 0.0 {
+            return Err(AmountFromF64Error::Negative);
+        }
+
+        let parsed_value = (AMOUNT_MULTIPLIER as f64 * value).floor() as u64;
+        // `f64` can't represent integers over `(2**53 - 1)` accurately.
+        if parsed_value > 9007199254740991 {
+            // let's try a safer, slower alternative
+            value
+                .to_string()
+                .parse()
+                .map_err(AmountFromF64Error::Fallback)
+        } else {
+            Ok(Amount(parsed_value))
+        }
+    }
+}
+
 impl Serialize for Amount {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -128,21 +171,7 @@ impl<'de> serde::de::Visitor<'de> for AmountVisitor {
     where
         E: serde::de::Error,
     {
-        if !value.is_normal() && value != 0.0 {
-            return Err(E::custom("Amounts must be finite and a number"));
-        }
-        if value < 0.0 {
-            return Err(E::custom("Amounts must be positive"));
-        }
-
-        let parsed_value = (AMOUNT_MULTIPLIER as f64 * value).floor() as u64;
-        // `f64` can't represent integers over `(2**53 - 1)` accurately.
-        if parsed_value > 9007199254740991 {
-            // let's try a safer, slower alternative
-            self.visit_str::<E>(&value.to_string())
-        } else {
-            Ok(Amount(parsed_value))
-        }
+        value.try_into().map_err(serde::de::Error::custom)
     }
 }
 
