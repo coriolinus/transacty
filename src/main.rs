@@ -19,15 +19,16 @@ struct Cli {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
-    let reader = csv::Reader::from_path(&cli.input)?;
+    let reader = csv::ReaderBuilder::new()
+        .trim(csv::Trim::All)
+        .from_path(&cli.input)?;
 
     let mut state = MemoryState::default();
     process_events(
         &mut state,
         reader
             .into_deserialize()
-            // TODO: this assumes no CSV errors in input files; accurate?
-            .filter_map(|maybe_event| maybe_event.ok()),
+            .map(|maybe_event| maybe_event.expect("csv files are valid throughout")),
         None,
     );
 
