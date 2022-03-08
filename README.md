@@ -22,7 +22,7 @@ motivated largely by the YAGNI principle.
 > concurrent TCP streams?
 
 In this case, we'd want to write an asynchronous version of this code. This would be a pretty straightforward
-modification, the most complicated part of which would be to update the `StateManager` trait to deal with `Future` objects
+modification, the most complicated part of which would be to update the `StateManager` trait to deal with `Future` trait objects
 (as of this writing, async trait members are still not allowed in stable rust).
 
 In that case we'd also need some more robust definition of the actual sequencing of events; several of the event types
@@ -47,9 +47,19 @@ to ensure maximum reusability of components.
 
 ... have been omitted. YAGNI for a toy project.
 
+### Error Handling
+
+Errors are generally handled gracefully, with some work put into ensuring stability. When run with the `--debug` flag,
+runtime errors (i.e. insufficient balance to withdraw) are reported to stderr; otherwise, they are silently suppressed.
+
+There are no instances of `.unwrap()` in this codebase. Explicit assumptions are sometimes expressed via `.expect()`.
+
 ## Assumptions
 
-- Transaction IDs are globally unique
-- No test data will overflow `i64`
+- No test data will cause `Amount` to overflow
 - Only deposits can be disputed
 - Only withdrawals are affected by locks; deposits are still permitted
+- Test data is valid CSV throughout; invalid CSV data is not a state to guard against
+- Writing to stderr never panics
+
+These assumptions are sometimes reflected in error-handling simplifications and may panic if invalidated.
