@@ -1,7 +1,7 @@
 pub mod primitives;
 pub mod state;
 
-use primitives::{ClientId, Event, EventType, TransactionId};
+use primitives::{ClientId, Event, TransactionId};
 use state::StateManager;
 
 /// Process a stream of events, updating global state appropriately.
@@ -31,12 +31,14 @@ pub fn process_events<State, I>(
 
 #[derive(Debug, thiserror::Error)]
 pub enum EventError<E> {
+    #[error("transaction {0} already exists; IDs may not be duplicated")]
+    DuplicateTransactionId(TransactionId),
     #[error("client {0} has insufficient funds to withdraw as requested by transaction {1}")]
     InsufficientFunds(ClientId, TransactionId),
     #[error("client {0} cannot withdraw per transaction {1} because their account is locked")]
     AccountLocked(ClientId, TransactionId),
-    #[error("client {0} attempted to dispute transaction {1} ({2:?}), but only deposits may be disputed")]
-    IllegalDispute(ClientId, TransactionId, EventType),
+    #[error("client {0} attempted to dispute transaction {1}, which is already under dispute")]
+    DoubleDispute(ClientId, TransactionId),
     #[error("client {0} does not exist")]
     UnknownClient(ClientId),
     #[error("state error")]

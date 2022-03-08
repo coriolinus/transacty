@@ -38,14 +38,12 @@ impl StateManager for MemoryState {
     fn handle_event(&mut self, event: Event) -> Result<(), EventError<Self::Err>> {
         match event.event_type {
             EventType::Deposit => {
-                self.client_state.entry(event.client).or_default().available += event.amount;
-                if let Some(displaced) = self.deposits.insert(event.tx, event.into()) {
-                    // given untrusted user input, this could produce some kind of validation error instead
-                    panic!(
-                        "expected globally unique transaction IDs but inserted duplicate tx ID: {}",
-                        displaced.event.tx
-                    );
+                if self.deposits.contains_key(&event.tx) {
+                    return Err(EventError::DuplicateTransactionId(event.tx));
                 }
+
+                self.client_state.entry(event.client).or_default().available += event.amount;
+                self.deposits.insert(event.tx, event.into());
             }
 
             EventType::Withdrawal => {
@@ -60,32 +58,29 @@ impl StateManager for MemoryState {
                 if state.locked {
                     return Err(EventError::AccountLocked(event.client, event.tx));
                 }
+
                 state.available -= event.amount;
             }
 
             EventType::Dispute => {
-                if let Some(record) = self.deposits.get(&event.tx) {
-                    if record.event.event_type != EventType::Deposit {
-                        return Err(EventError::IllegalDispute(
-                            event.client,
-                            event.tx,
-                            record.event.event_type,
-                        ));
+                if let Some(record) = self.deposits.get_mut(&event.tx) {
+                    if record.is_disputed {
+                        return Err(EventError::DoubleDispute(event.client, event.tx));
                     }
+
                     let state = self
                         .client_state
                         .get_mut(&record.event.client)
                         .ok_or(EventError::UnknownClient(event.client))?;
+
+                    record.is_disputed = true;
                     state.available -= record.event.amount;
                     state.held += record.event.amount;
-                } else {
-                    // If the tx specified by the dispute doesn't exist you can ignore it and assume this is
-                    // an error on our partners' side.
                 }
             }
 
             EventType::Resolve => {
-                if let Some(record) = self.deposits.get(&event.tx) {
+                if let Some(record) = self.deposits.get_mut(&event.tx) {
                     if !record.is_disputed {
                         // If the tx isn't under dispute, you can ignore the resolve and assume this is an error
                         // on our partners' side.
@@ -96,13 +91,15 @@ impl StateManager for MemoryState {
                         .client_state
                         .get_mut(&record.event.client)
                         .ok_or(EventError::UnknownClient(event.client))?;
+
+                    record.is_disputed = false;
                     state.held -= record.event.amount;
                     state.available += record.event.amount;
                 }
             }
 
             EventType::Chargeback => {
-                if let Some(record) = self.deposits.get(&event.tx) {
+                if let Some(record) = self.deposits.get_mut(&event.tx) {
                     if !record.is_disputed {
                         // If the tx isn't under dispute, you can ignore the resolve and assume this is an error
                         // on our partners' side.
@@ -113,6 +110,8 @@ impl StateManager for MemoryState {
                         .client_state
                         .get_mut(&record.event.client)
                         .ok_or(EventError::UnknownClient(event.client))?;
+
+                    record.is_disputed = false;
                     state.held -= record.event.amount;
                     state.locked = true;
                 }
