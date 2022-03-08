@@ -120,4 +120,12 @@ impl StateManager for MemoryState {
 
         Ok(())
     }
+
+    fn emit_state(&self) -> Box<dyn '_ + Iterator<Item = crate::primitives::SerializeClientState>> {
+        Box::new(
+            self.client_state
+                .iter()
+                .map(|(client_id, client_state)| client_state.to_serialize(*client_id)),
+        )
+    }
 }

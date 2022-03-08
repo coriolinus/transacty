@@ -1,6 +1,9 @@
 pub mod memory;
 
-use crate::{primitives::Event, EventError};
+use crate::{
+    primitives::{Event, SerializeClientState},
+    EventError,
+};
 
 /// A StateManager can update global state appropriately in response to events.
 pub trait StateManager {
@@ -8,6 +11,11 @@ pub trait StateManager {
     /// state manager: connection issues to redis, etc.
     type Err;
 
-    /// This function updates global state appropriately in response to
+    /// This function updates global state appropriately in response to incoming events.
     fn handle_event(&mut self, event: Event) -> Result<(), EventError<Self::Err>>;
+
+    /// This function emits global state as an unordered set of records.
+    ///
+    /// The box will hopefully become unnecessary in future versions of Rust.
+    fn emit_state(&self) -> Box<dyn '_ + Iterator<Item = SerializeClientState>>;
 }
