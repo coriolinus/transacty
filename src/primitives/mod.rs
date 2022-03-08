@@ -198,6 +198,12 @@ mod tests {
         }
 
         #[test]
+        fn test_event_stream_never_crashes_many_tx_per_account(events in proptest::collection::vec(arb_event(5, 1000.0), 100)) {
+            let mut state = MemoryState::default();
+            crate::process_events(&mut state, events, None);
+        }
+
+        #[test]
         fn deposits_always_succeed(
             available in arb_amount(1000.0),
             held in arb_amount(1000.0),
