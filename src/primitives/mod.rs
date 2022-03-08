@@ -32,6 +32,7 @@ pub enum EventType {
     Eq,
     PartialOrd,
     Ord,
+    Hash,
     FromStr,
     Display,
     From,
@@ -54,6 +55,7 @@ pub struct ClientId(u16);
     Eq,
     PartialOrd,
     Ord,
+    Hash,
     FromStr,
     Display,
     From,
@@ -74,7 +76,7 @@ pub struct Event {
 }
 
 /// ClientState stores the fundamental data about a particular client.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ClientState {
     pub available: Amount,
     pub held: Amount,

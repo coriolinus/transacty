@@ -22,6 +22,7 @@ use std::{fmt, str::FromStr};
 /// `sp_arithmetic::rational::Rational128` is not suitable because it requires building
 /// large parts of Substrate, which is enormous.
 #[derive(
+    Default,
     Debug,
     Clone,
     Copy,
