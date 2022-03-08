@@ -20,7 +20,7 @@ pub fn process_events<State, I>(
     for event in events.into_iter() {
         if let Err(err) = state.handle_event(event) {
             if let Some(errors) = &errors {
-                if let Err(_) = errors.send(err) {
+                if errors.send(err).is_err() {
                     eprintln!("event processing terminated early due to send error");
                     break;
                 }
