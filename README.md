@@ -76,5 +76,8 @@ There are no instances of `.unwrap()` in this codebase. Explicit assumptions are
 
 These assumptions are sometimes reflected in error-handling simplifications and may panic if invalidated.
 
-The last assumption is critical, and the most likely to be invalidated. It is the most likely one which will need to be worked around
-in production code.
+The last assumption is critical, and the most likely to be invalidated.
+However, it's impossible to tell from the instructions given what the policy should be. Some plausible policies:
+
+- Invent a `SignedAmount` type which can be used only for the `available` balance, compatible otherwise with `Amount`. Requires a fair amount of implementation.
+- Invent a holding period during which deposits are automatically held, and after which transactions cannot be disputed. Requires a notion of time.
