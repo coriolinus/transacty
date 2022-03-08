@@ -1,3 +1,5 @@
+/// The Amount type is complicated, so we've moved it into its own module for code organization purposes.
+/// Logically, it lives among the other primitives.
 mod amount;
 pub use amount::Amount;
 
@@ -5,10 +7,10 @@ use derive_more::{Display, From, FromStr};
 
 use serde::{Deserialize, Serialize};
 
-/// The `TxType` identifies the nature of the specified transaction.
+/// The event type identifies the nature of the specified transaction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum TxType {
+pub enum EventType {
     Deposit,
     Withdrawal,
     Dispute,
@@ -60,10 +62,12 @@ pub struct ClientId(u16);
 )]
 pub struct TransactionId(u32);
 
-/// A Transaction is the fundamental unit of data flowing through this system.
+/// An Event is the fundamental unit of data flowing through this system.
+///
+/// It is an atomic unit of state change.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Transaction {
-    pub tx_type: TxType,
+pub struct Event {
+    pub event_type: EventType,
     pub client: ClientId,
     pub tx: TransactionId,
     pub amount: Amount,
@@ -72,7 +76,6 @@ pub struct Transaction {
 /// ClientState stores the fundamental data about a particular client.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ClientState {
-    pub id: ClientId,
     pub available: Amount,
     pub held: Amount,
     // total is always computed dynamically, so the struct can't get out of sync with itself

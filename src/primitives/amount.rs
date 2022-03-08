@@ -1,7 +1,6 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-
 use std::{fmt, str::FromStr};
 
 /// An `Amount` specifies a fixed-precision quantity supporting up to four digits past
