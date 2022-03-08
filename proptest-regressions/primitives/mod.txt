@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc de89bd9d711e28068ebde82fd3eb5ff73211bbd1149041119e2da28b1a754206 # shrinks to available = Amount(0), held = Amount(0), locked = false, disputed_amount = Amount(4708653)

@@ -7,9 +7,10 @@ use crate::{
 };
 
 /// Deposit records keep track of which deposits are under dispute
-struct DepositRecord {
-    event: Event,
-    is_disputed: bool,
+#[derive(Debug, Clone)]
+pub(crate) struct DepositRecord {
+    pub(crate) event: Event,
+    pub(crate) is_disputed: bool,
 }
 
 impl From<Event> for DepositRecord {
@@ -26,10 +27,10 @@ impl From<Event> for DepositRecord {
 /// It's simple and fast, but unsuitable for production; production data stores
 /// would like to have something with persistence, and something which can better
 /// handle large states.
-#[derive(Default)]
+#[derive(Default, Debug, Clone)]
 pub struct MemoryState {
-    client_state: HashMap<ClientId, ClientState>,
-    deposits: HashMap<TransactionId, DepositRecord>,
+    pub(crate) client_state: HashMap<ClientId, ClientState>,
+    pub(crate) deposits: HashMap<TransactionId, DepositRecord>,
 }
 
 impl StateManager for MemoryState {

@@ -138,6 +138,7 @@ pub struct SerializeClientState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::state::memory::MemoryState;
     use proptest::prelude::*;
 
     prop_compose! {
@@ -192,8 +193,131 @@ mod tests {
         // This test is somewhat slow and benefits when being run in release mode
         #[test]
         fn test_event_stream_never_crashes(events in proptest::collection::vec(arb_event(100, 1000.0), (10, 1000))) {
-            let mut state = crate::state::memory::MemoryState::default();
+            let mut state = MemoryState::default();
             crate::process_events(&mut state, events, None);
+        }
+
+        #[test]
+        fn deposits_always_succeed(
+            available in arb_amount(1000.0),
+            held in arb_amount(1000.0),
+            locked: bool,
+            deposit in arb_amount(100.0),
+        ) {
+            let mut state = MemoryState::default();
+            let client: ClientId = 1.into();
+            state.client_state.insert(client, ClientState { available, held, locked });
+            prop_assert!(state.deposits.is_empty());
+
+            let event = Event { event_type: EventType::Deposit, client, tx: 1.into(), amount: deposit };
+            crate::process_events(&mut state, [event.clone()], None);
+
+            prop_assert_eq!(state.client_state[&client].available, available + deposit);
+            prop_assert_eq!(state.client_state[&client].held, held);
+            prop_assert_eq!(state.deposits.len(), 1);
+            prop_assert_eq!(&state.deposits[&1.into()].event, &event);
+            prop_assert_eq!(state.deposits[&1.into()].is_disputed, false);
+        }
+
+        #[test]
+        fn withdrawals_succeed_when_unlocked_and_sufficient_balance(
+            available in arb_amount(1000.0),
+            held in arb_amount(1000.0),
+            locked: bool,
+            withdrawal in arb_amount(100.0),
+        ) {
+            let mut state = MemoryState::default();
+            let client: ClientId = 1.into();
+            state.client_state.insert(client, ClientState { available, held, locked });
+
+            let event = Event { event_type: EventType::Withdrawal, client, tx: 1.into(), amount: withdrawal };
+            crate::process_events(&mut state, [event], None);
+
+            if !locked && withdrawal <= available {
+                // withdrawal should succeed
+                prop_assert_eq!(state.client_state[&client].available, available - withdrawal);
+            } else {
+                // withdrawal should fail
+                prop_assert_eq!(state.client_state[&client].available, available);
+            }
+            prop_assert_eq!(state.client_state[&client].held, held);
+        }
+
+        #[test]
+        fn dispute_moves_available_funds_to_held(
+            available in arb_amount(1000.0),
+            held in arb_amount(1000.0),
+            locked: bool,
+            disputed_amount in arb_amount(1000.0),
+        ) {
+            prop_assume!(disputed_amount <= available);
+
+            let mut state = MemoryState::default();
+            let client: ClientId = 1.into();
+            let tx: TransactionId = 1.into();
+
+            state.client_state.insert(client, ClientState { available, held, locked });
+            let deposit = Event { event_type: EventType::Deposit, client, tx, amount: disputed_amount };
+            state.deposits.insert(deposit.tx, deposit.into());
+            prop_assert!(!state.deposits[&tx].is_disputed);
+
+            let dispute = Event { event_type: EventType::Dispute, client: 2.into(), tx, amount: Amount::ZERO};
+            crate::process_events(&mut state, [dispute], None);
+
+            prop_assert!(state.deposits[&tx].is_disputed);
+            prop_assert_eq!(state.client_state[&client].available, available - disputed_amount);
+            prop_assert_eq!(state.client_state[&client].held, held + disputed_amount);
+        }
+
+        #[test]
+        fn resolve_moves_held_funds_to_available(
+            available in arb_amount(1000.0),
+            held in arb_amount(1000.0),
+            locked: bool,
+            disputed_amount in arb_amount(1000.0),
+        ) {
+            prop_assume!(disputed_amount <= held);
+
+            let mut state = MemoryState::default();
+            let client: ClientId = 1.into();
+            let tx: TransactionId = 1.into();
+
+            state.client_state.insert(client, ClientState { available, held, locked });
+            let deposit = Event { event_type: EventType::Deposit, client, tx, amount: disputed_amount };
+            state.deposits.insert(deposit.tx, crate::state::memory::DepositRecord { event: deposit, is_disputed: true });
+
+            let resolve = Event { event_type: EventType::Resolve, client: 2.into(), tx, amount: Amount::ZERO};
+            crate::process_events(&mut state, [resolve], None);
+
+            prop_assert!(!state.deposits[&tx].is_disputed);
+            prop_assert_eq!(state.client_state[&client].available, available + disputed_amount);
+            prop_assert_eq!(state.client_state[&client].held, held - disputed_amount);
+        }
+
+        #[test]
+        fn chargeback_burns_held_funds_and_locks(
+            available in arb_amount(1000.0),
+            held in arb_amount(1000.0),
+            locked: bool,
+            disputed_amount in arb_amount(1000.0),
+        ) {
+            prop_assume!(disputed_amount <= held);
+
+            let mut state = MemoryState::default();
+            let client: ClientId = 1.into();
+            let tx: TransactionId = 1.into();
+
+            state.client_state.insert(client, ClientState { available, held, locked });
+            let deposit = Event { event_type: EventType::Deposit, client, tx, amount: disputed_amount };
+            state.deposits.insert(deposit.tx, crate::state::memory::DepositRecord { event: deposit, is_disputed: true });
+
+            let chargeback = Event { event_type: EventType::Chargeback, client: 2.into(), tx, amount: Amount::ZERO};
+            crate::process_events(&mut state, [chargeback], None);
+
+            prop_assert!(!state.deposits[&tx].is_disputed);
+            prop_assert_eq!(state.client_state[&client].available, available);
+            prop_assert_eq!(state.client_state[&client].held, held - disputed_amount);
+            prop_assert!(state.client_state[&client].locked);
         }
     }
 }

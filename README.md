@@ -67,10 +67,14 @@ There are no instances of `.unwrap()` in this codebase. Explicit assumptions are
 
 ## Assumptions
 
-- No test data will cause `Amount` to overflow
+- No test data will cause any `Amount` to overflow
 - Only deposits can be disputed
 - Only withdrawals are affected by locks; deposits are still permitted
 - Test data is valid CSV throughout; invalid CSV data is not a state to guard against
 - Writing to stderr never panics
+- Disputes will never result in the available balance underflowing
 
 These assumptions are sometimes reflected in error-handling simplifications and may panic if invalidated.
+
+The last assumption is critical, and the most likely to be invalidated. It is the most likely one which will need to be worked around
+in production code.
