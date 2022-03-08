@@ -25,22 +25,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .comment(Some(b'#'))
         .from_path(&cli.input)?;
 
-    let mut errors = None;
-    let join_handle = if cli.debug {
+    let (errors, join_handle) = if cli.debug {
         let (tx, rx) = std::sync::mpsc::sync_channel(16);
-        errors = Some(tx);
-        Some(std::thread::spawn(move || {
-            use std::io::Write;
+        (
+            Some(tx),
+            Some(std::thread::spawn(move || {
+                use std::io::Write;
 
-            let stderr = std::io::stderr();
-            let mut stderr = stderr.lock();
+                let stderr = std::io::stderr();
+                let mut stderr = stderr.lock();
 
-            while let Ok(err) = rx.recv() {
-                writeln!(stderr, "{err}").expect("writing to stderr never panics");
-            }
-        }))
+                while let Ok(err) = rx.recv() {
+                    writeln!(stderr, "{err}").expect("writing to stderr never panics");
+                }
+            })),
+        )
     } else {
-        None
+        (None, None)
     };
 
     let mut state = MemoryState::default();
@@ -62,7 +63,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // wait for all errors to be emitted before exiting
     if let Some(handle) = join_handle {
-        handle.join().expect("this thread never panics");
+        handle.join().expect("error-display thread never panics");
     }
 
     Ok(())

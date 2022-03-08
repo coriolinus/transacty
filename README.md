@@ -25,7 +25,7 @@ In this case, we'd want to write an asynchronous version of this code. This woul
 modification, the most complicated part of which would be to update the `StateManager` trait to deal with `Future` trait objects
 (as of this writing, async trait members are still not allowed in stable rust).
 
-In that case we'd also need some more robust definition of the actual sequencing of events; several of the event types
+In that case we'd also need some more robust definition of the actual sequencing of events; several of the event effects
 depend on the precise order of prior events, which would be unreliable given events flowing through thousands of
 concurrent TCP streams.
 
